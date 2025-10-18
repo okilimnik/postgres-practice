@@ -1,4 +1,4 @@
-(ns okilimnik.postgres.practice
+(ns okilimnik.postgres.basics
   (:refer-clojure :exclude [update set])
   (:require
    [okilimnik.postgres.json :refer [jsonb]]
