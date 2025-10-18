@@ -1,20 +1,20 @@
 (ns okilimnik.postgres.practice
   (:refer-clojure :exclude [update set])
   (:require
-   [okilimnik.postgres.practice.json :refer [jsonb]]
+   [okilimnik.postgres.json :refer [jsonb]]
    [next.jdbc :as jdbc]
    [honey.sql :as sql]))
 
 (def datasource (jdbc/get-datasource {:dbtype "postgres" :dbname "mydb" :username "practitioner" :password "practice"}))
 (def conn (jdbc/get-connection datasource))
+(jdbc/execute! conn (sql/format {:drop-table [:if-exists :products]}))
+(jdbc/execute! conn (sql/format {:drop-table [:if-exists :orders]}))
+(jdbc/execute! conn (sql/format {:drop-table [:if-exists :users]}))
 
-;; Drop Tables
-(let [q (sql/format {:drop-table :orders})]
-  (print q)
-  (jdbc/execute! conn q))
-(let [q (sql/format {:drop-table :users})]
-  (print q)
-  (jdbc/execute! conn q))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Topic 1: Create Table ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Create Table
 (let [q (sql/format {:create-table [:users :if-not-exists]
@@ -33,6 +33,11 @@
                                     [:created-at :timestamp :default [:now]]]})]
   (print q)
   (jdbc/execute! conn q))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Topic 2: INSERT Data (DML) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Insert a Single Row
 (let [q (sql/format {:insert-into :users
@@ -67,6 +72,11 @@
                      :returning [:id :name]})]
   (print q)
   (jdbc/execute! conn q))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Topic 3: SELECT Queries ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Select All Rows
 (let [q (sql/format {:select [:*] :from :users})]
@@ -108,3 +118,64 @@
   (print q)
   (jdbc/execute! conn q))
 
+
+;;;;;;;;;;;;;;;;;;;;
+;; Topic 4: JOINs ;;
+;;;;;;;;;;;;;;;;;;;;
+
+;; INNER JOIN
+(let [q (sql/format {:select [:u.name :o.product]
+                     :from [[:users :u]]
+                     :join [[:orders :o] [:= :u.id :o.user-id]]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; LEFT JOIN
+(let [q (sql/format {:select [:u.name :o.product]
+                     :from [[:users :u]]
+                     :left-join [[:orders :o] [:= :u.id :o.user-id]]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; RIGHT JOIN
+(let [q (sql/format {:select [:u.name :o.product]
+                     :from [[:users :u]]
+                     :right-join [[:orders :o] [:= :u.id :o.user-id]]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; FULL OUTER JOIN
+(let [q (sql/format {:select [:u.name :o.product]
+                     :from [[:users :u]]
+                     :full-join [[:orders :o] [:= :u.id :o.user-id]]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; Joining Multiple Tables (pay attention, product is a JSONB field)
+(let [q (sql/format {:create-table [:products :if-not-exists]
+                     :with-columns [[:id :serial :primary-key]
+                                    [:name [:varchar 100] :not-null]
+                                    [:category [:varchar 100] :not-null]]})]
+  (jdbc/execute! conn q))
+(let [q (sql/format {:insert-into :products
+                     :values [{:name "Laptop"
+                               :category "Computers"}]})]
+  (jdbc/execute! conn q))
+(let [q (sql/format {:select [:u.name :o.product :p.category]
+                     :from [[:users :u]]
+                     :join [[:orders :o] [:= :u.id :o.user-id]
+                            [:products :p] [:= [:raw "(o.product ->> 'name')"] :p.name]]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Topic 5: Aggregations & GROUP BY ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; COUNT
+(let [q (sql/format {:select [:u.name :o.product]
+                     :from [[:users :u]]
+                     :full-join [[:orders :o] [:= :u.id :o.user-id]]})]
+  (print q)
+  (jdbc/execute! conn q))

@@ -1,4 +1,4 @@
-(ns okilimnik.postgres.practice.json
+(ns okilimnik.postgres.json
   (:require
    [jsonista.core :as j]
    [next.jdbc.prepare :as prepare]
