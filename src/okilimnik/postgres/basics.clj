@@ -174,8 +174,62 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; COUNT
-(let [q (sql/format {:select [:u.name :o.product]
+(let [q (sql/format {:select [[[:count :*]]]
+                     :from [:users]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+(let [q (sql/format {:select [:%count.*]
+                     :from [:users]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; SUM, AVG, MIN, MAX
+(let [q (sql/format {:select [:%sum.age :%avg.age :%min.age :%max.age]
+                     :from [:users]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; GROUP BY
+(let [q (sql/format {:select [:age :%count.*]
+                     :from [:users]
+                     :group-by [:age]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; HAVING (Filter Groups)
+(let [q (sql/format {:select [:age :%count.*]
+                     :from [:users]
+                     :group-by [:age]
+                     :having [:> :%count.* 1]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; Aggregation with JOIN
+(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders]]
                      :from [[:users :u]]
-                     :full-join [[:orders :o] [:= :u.id :o.user-id]]})]
+                     :left-join [[:orders :o] [:= :u.id :o.user-id]]
+                     :group-by [:u.name]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; Multiple Aggregates & GROUP BY
+(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders] [[:avg [:raw "(o.product->>'price')::numeric"]] :avg-price]]
+                     :from [[:users :u]]
+                     :left-join [[:orders :o] [:= :u.id :o.user-id]]
+                     :group-by [:u.name]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Topic 6: Window Functions ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; RANK()
+(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders] [[:avg [:raw "(o.product->>'price')::numeric"]] :avg-price]]
+                     :from [[:users :u]]
+                     :left-join [[:orders :o] [:= :u.id :o.user-id]]
+                     :group-by [:u.name]})]
   (print q)
   (jdbc/execute! conn q))
