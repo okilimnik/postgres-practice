@@ -214,7 +214,9 @@
   (jdbc/execute! conn q))
 
 ;; Multiple Aggregates & GROUP BY
-(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders] [[:avg [:raw "(o.product->>'price')::numeric"]] :avg-price]]
+(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders]
+                              [[:avg [:raw "(o.product->>'price')::numeric"]]
+                               :avg-price]]
                      :from [[:users :u]]
                      :left-join [[:orders :o] [:= :u.id :o.user-id]]
                      :group-by [:u.name]})]
@@ -227,9 +229,37 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; RANK()
-(let [q (sql/format {:select [:u.name [[:count :o.id] :total-orders] [[:avg [:raw "(o.product->>'price')::numeric"]] :avg-price]]
-                     :from [[:users :u]]
-                     :left-join [[:orders :o] [:= :u.id :o.user-id]]
-                     :group-by [:u.name]})]
+(let [q (sql/format {:select [:name :age [[:over [[:rank] {:order-by [[:age :desc]]}]]
+                                          :age-rank]]
+                     :from [:users]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; ROW_NUMBER()
+(let [q (sql/format {:select [:name [[:over [[:row_number] {:order-by [:id]}]]
+                                     :row-num]]
+                     :from [:users]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; PARTITION BY
+(let [q (sql/format {:select [:user-id [[:over [[:count :*] {:partition-by [:user-id]}]]
+                                        :orders-per-user]]
+                     :from [:orders]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; SUM() OVER (Running Total)
+(let [q (sql/format {:select [:user-id :id [[:over [[:sum :id] {:partition-by [:user-id]
+                                                                :order-by [:id]}]]
+                                            :running-total]]
+                     :from [:orders]})]
+  (print q)
+  (jdbc/execute! conn q))
+
+;; Moving Average
+(let [q (sql/format {:select [:user-id :id [[:raw "AVG(id) OVER (PARTITION BY user_id ORDER BY id ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)"]
+                                            :moving-avg]]
+                     :from [:orders]})]
   (print q)
   (jdbc/execute! conn q))
